@@ -1,0 +1,8 @@
+/scripts
+/config
+*/**/dist
+*/**/es
+/node_modules
+*/**/node_modules
+.*
+docs
