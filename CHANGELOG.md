@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.1.0...0.2.0) (2020-09-08)
+
+
+### Features
+
+* 支持重置配置文件 ([ec6e839](https://github.com/MyCupOfTeaOo/qg-react-install/commit/ec6e839d25aa2616b91b641a480bc7353b8230e0))
+
 # 0.1.0 (2020-09-08)
 
 
