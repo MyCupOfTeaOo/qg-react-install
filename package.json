@@ -1,6 +1,6 @@
 {
   "name": "qg-react-install",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "react组件安装器",
   "main": "./dist/index.js",
   "dependencies": {
