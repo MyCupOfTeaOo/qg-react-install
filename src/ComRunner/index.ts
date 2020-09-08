@@ -4,7 +4,7 @@ import path from 'path';
 import * as changeCase from 'change-case';
 import compareVersions from 'compare-versions';
 import { WriteStream } from 'tty';
-import signale, { await } from 'signale';
+import signale from 'signale';
 import nconf from 'nconf';
 import joi from 'joi';
 import glob from 'glob';
@@ -12,7 +12,7 @@ import rimraf from 'rimraf';
 import { isBuffer } from 'util';
 import { Observable } from 'rxjs';
 import { Context, Com, ComPackage, ComLink } from '../interface';
-import { saveConfig, streamPrint } from '../utils';
+import { saveConfig, streamPrint, separator } from '../utils';
 import Listr from 'listr';
 
 interface Builder {
@@ -43,15 +43,16 @@ const schema = joi
 
 class ComRunner {
   ctx: Context;
+  scope = 'com';
   _builder: Partial<Builder> = {};
   config = nconf.get('com');
   interactiveLogger = new signale.Signale({
     interactive: true,
-    scope: 'com',
+    scope: this.scope,
   });
   logger = new signale.Signale({
     interactive: false,
-    scope: 'com',
+    scope: this.scope,
   });
   _comListMap: Record<string, Com[]> = {};
 
@@ -124,7 +125,9 @@ class ComRunner {
   };
 
   getProjectComDeps = async () => {
-    return (await this.comList()).reduce<Record<string, string>>(
+    return (await this.comList(this.ctx.PROJECT_PATH)).reduce<
+      Record<string, string>
+    >(
       (map, com) =>
         Object.assign(map, {
           [com.name]: `^${com.version}`,
@@ -366,7 +369,7 @@ class ComRunner {
                 writable: true,
               } as any) as WriteStream;
               const logger = new signale.Signale({
-                scope: 'com',
+                scope: this.scope,
                 interactive: false,
                 stream: myStream,
               });
@@ -406,10 +409,10 @@ class ComRunner {
     );
 
     if (depsNum) {
-      this.logger.await(`[%d/${depsNum}}] - 分析依赖`, 0);
+      this.interactiveLogger.await(`[%d/${depsNum}] - 分析依赖`, 0);
       let i = 1;
       for (const depKey of Object.keys(com.dependencies)) {
-        this.logger.await(`[%d/${depsNum}}] - ${depKey}`, i);
+        this.interactiveLogger.await(`[%d/${depsNum}] - ${depKey}`, i);
 
         if (projectDeps[depKey]) {
           if (
@@ -439,6 +442,7 @@ class ComRunner {
         }
         i += 1;
       }
+      this.interactiveLogger.success(`[%d/${depsNum}] - 依赖分析完毕`, depsNum);
     }
     // 全局依赖
     if (installDeps.length) {
@@ -480,8 +484,9 @@ class ComRunner {
         i += 1;
         this.logger.await(`[%d/${qgDeps.length}] - ${depKey}`, i);
         const runner = new ComRunner(this.ctx);
+        runner.scope = `${this.scope}->${com.name}`;
         runner.logger = new signale.Signale({
-          scope: com.name,
+          scope: `${this.scope}->${com.name}`,
           interactive: true,
         });
         const target = (await this.comList()).find(
@@ -495,6 +500,7 @@ class ComRunner {
           runner.overwrite();
         }
         await runner.install(target).exec();
+        separator();
       }
     }
     const files = await new Promise<string[]>((resolve, reject) => {
@@ -529,11 +535,10 @@ class ComRunner {
       }
     });
     let i = 0;
-    this.logger.await(`[%d/${files.length}] - 准备安装:  ${com.name}`, i);
+    this.logger.await(`[%d/${files.length}] - 准备安装文件`, i);
     for (const filePath of files) {
-      const fileBase = path.parse(filePath).base;
       i += 1;
-      this.logger.await(`[%d/${files.length}] - ${fileBase}`, i);
+      this.logger.await(`[%d/${files.length}] - ${filePath}`, i);
       await fse.copy(
         path.resolve(this.ctx.COM_PATH, filePath),
         path.resolve(projectPath, filePath),
