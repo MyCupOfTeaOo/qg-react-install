@@ -209,7 +209,7 @@ class ComRunner {
         if (
           com.type === 'util' &&
           (await fse.pathExists(
-            path.resolve(this.ctx.PROJECT_PATH, `./src/utils/${com.shortName}`),
+            path.resolve(this.ctx.PROJECT_PATH, `./src/utils/${com.shortName}.ts`),
           )) &&
           !(await fse.pathExists(
             path.resolve(
