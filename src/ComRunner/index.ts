@@ -206,13 +206,6 @@ class ComRunner {
         ) {
           hasCom = true;
         }
-        console.log(
-          com.type,
-          path.resolve(
-            this.ctx.PROJECT_PATH,
-            `./src/utils/${com.shortName}.ts`,
-          ),
-        );
         if (
           com.type === 'util' &&
           (await fse.pathExists(
