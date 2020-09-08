@@ -32,6 +32,7 @@
     "split": "^1.0.1"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "^2.0.0",
     "release-it": "^13.6.1",
     "ts-node": "^8.10.1",
     "tslib": "^2.0.0",
@@ -42,7 +43,7 @@
     "build": "ts-node ./scripts/build.ts",
     "debug": "ts-node ./scripts/build.ts && npm pack",
     "clear": "rimraf dist src/com src/block *.tgz",
-    "publish:all": "npm run build && release-it --ci"
+    "publish:all": "npm run clear && npm run build && release-it --ci"
   },
   "author": "tea",
   "repository": {

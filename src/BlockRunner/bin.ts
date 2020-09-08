@@ -12,9 +12,8 @@ myProgram
   .option('--auto-commit', 'auto commit git message')
   .option('--config', 'show local config')
   .option('-m, --message <commit_msg>', 'commit message')
-  .action((...args) => {
-    console.log('block');
-    console.log(args);
+  .action((props) => {
+    console.log('未完待续');
   });
 
 program.addCommand(myProgram);

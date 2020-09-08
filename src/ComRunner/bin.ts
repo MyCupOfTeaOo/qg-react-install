@@ -33,6 +33,9 @@ myProgram
     if (props.link) {
       runner.link();
     }
+    if (props.overwrite) {
+      runner.overwrite();
+    }
     if (props.unlink) {
       const comList = await runner.syncComList();
       const res = await inquirer.prompt([

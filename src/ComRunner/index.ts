@@ -226,9 +226,11 @@ class ComRunner {
         if (hasCom) {
           if (this._builder.overwrite) {
             this.logger.warn(`出现了非组件的同名文件,覆盖 ${com.name}`);
+            separator();
             await this._install(com);
           } else {
             this.logger.warn(`出现了非组件的同名文件,跳过 ${com.name}`);
+            separator();
           }
         } else {
           await this._install(com);
@@ -240,7 +242,7 @@ class ComRunner {
       const tasks = new Listr(
         this._builder.sync.map(com => {
           return {
-            title: `同步区块: ${com.name}`,
+            title: `同步组件: ${com.name}`,
             task: () => this._sync(com),
           };
         }),
@@ -249,7 +251,7 @@ class ComRunner {
       await tasks
         .run()
         .then(() => {
-          this.logger.success('区块同步完毕');
+          this.logger.success('组件同步完毕');
         })
         .catch(err => {
           (err.errors as string[]).forEach(error => {
@@ -266,8 +268,11 @@ class ComRunner {
           };
         }
         links[com.name].project[this.ctx.PROJECT_PATH] = {};
+        this.logger.success(
+          `检测到link命令,建立依赖关系 ${com.name} -> ${this.ctx.PROJECT_PATH}`,
+        );
       });
-      nconf.set('block', this.config);
+      nconf.set('com', this.config);
       await saveConfig();
     }
     if (this._builder.unlink) {
@@ -279,8 +284,11 @@ class ComRunner {
             delete links[com.name];
           }
         }
+        this.logger.success(
+          `检测到unlink命令,删除依赖关系 ${com.name} -> ${this.ctx.PROJECT_PATH}`,
+        );
       });
-      nconf.set('block', this.config);
+      nconf.set('com', this.config);
       await saveConfig();
     }
   };
@@ -412,10 +420,10 @@ class ComRunner {
     );
 
     if (depsNum) {
-      this.interactiveLogger.await(`[%d/${depsNum}] - 分析依赖`, 0);
+      logger.await(`[%d/${depsNum}] - 分析依赖`, 0);
       let i = 1;
       for (const depKey of Object.keys(com.dependencies)) {
-        this.interactiveLogger.await(`[%d/${depsNum}] - ${depKey}`, i);
+        logger.await(`[%d/${depsNum}] - ${depKey}`, i);
 
         if (projectDeps[depKey]) {
           if (
@@ -445,7 +453,7 @@ class ComRunner {
         }
         i += 1;
       }
-      this.interactiveLogger.success(`[%d/${depsNum}] - 依赖分析完毕`, depsNum);
+      logger.success(`[%d/${depsNum}] - 依赖分析完毕`, depsNum);
     }
     // 全局依赖
     if (installDeps.length) {
@@ -471,21 +479,21 @@ class ComRunner {
       const totalDeps = installDeps
         .concat(updateDeps)
         .map(dep => `${dep[0]}@${dep[1]}`);
-      this.logger.await(`[%d/${totalDeps.length}] - 处理公共依赖`, 0);
+      logger.await(`[%d/${totalDeps.length}] - 处理公共依赖`, 0);
       const npmProcess = execa('npm', ['install', '-S', ...totalDeps], {
         cwd: projectPath,
         all: true,
       });
-      streamPrint(npmProcess.all, (this.logger as any).currentOptions.stream);
+      streamPrint(npmProcess.all, (logger as any).currentOptions.stream);
       await npmProcess;
-      this.logger.success('公共依赖处理完毕');
+      logger.success('公共依赖处理完毕');
     }
     if (qgDeps.length) {
       let i = 0;
-      this.logger.await(`[%d/${qgDeps.length}] - 处理内部依赖`, i);
+      logger.await(`[%d/${qgDeps.length}] - 处理内部依赖`, i);
       for (const depKey of qgDeps) {
         i += 1;
-        this.logger.await(`[%d/${qgDeps.length}] - ${depKey}`, i);
+        logger.await(`[%d/${qgDeps.length}] - ${depKey}`, i);
         const runner = new ComRunner(this.ctx);
         runner.scope = `${this.scope}->${com.name}`;
         runner.logger = new signale.Signale({
@@ -538,30 +546,30 @@ class ComRunner {
       }
     });
     let i = 0;
-    this.logger.await(`[%d/${files.length}] - 准备安装文件`, i);
+    logger.await(`[%d/${files.length}] - 准备安装文件`, i);
     for (const filePath of files) {
       i += 1;
-      this.logger.await(`[%d/${files.length}] - ${filePath}`, i);
+      logger.await(`[%d/${files.length}] - ${filePath}`, i);
       await fse.copy(
         path.resolve(this.ctx.COM_PATH, filePath),
         path.resolve(projectPath, filePath),
       );
     }
-    this.logger.success(`[${files.length}/${files.length}] - 安装完毕`);
+    logger.success(`[${files.length}/${files.length}] - 安装完毕`);
     if (this._builder.commit) {
-      this.logger.await('检测到自动提交');
+      logger.await('检测到自动提交');
       const addProcess = execa('git', ['add', '-A'], {
         cwd: projectPath,
         all: true,
       });
-      streamPrint(addProcess.all, (this.logger as any).currentOptions.stream);
+      streamPrint(addProcess.all, (logger as any).currentOptions.stream);
       await addProcess;
       const commitProcess = execa(
         'git',
         [
           'commit',
           '-m',
-          this._builder.commit.message || `chore(block): install ${com.name}`,
+          this._builder.commit.message || `chore(com): install ${com.name}`,
         ],
         {
           cwd: projectPath,
@@ -570,22 +578,22 @@ class ComRunner {
       );
       streamPrint(
         commitProcess.all,
-        (this.logger as any).currentOptions.stream,
+        (logger as any).currentOptions.stream,
       );
       await commitProcess;
       const pullProcess = execa('git', ['pull'], {
         cwd: projectPath,
         all: true,
       });
-      streamPrint(pullProcess.all, (this.logger as any).currentOptions.stream);
+      streamPrint(pullProcess.all, (logger as any).currentOptions.stream);
       await pullProcess;
       const pushT = execa('git', ['push'], {
         cwd: projectPath,
         all: true,
       });
-      streamPrint(pushT.all, (this.logger as any).currentOptions.stream);
+      streamPrint(pushT.all, (logger as any).currentOptions.stream);
       await pushT;
-      this.logger.success(`提交完成`);
+      logger.success(`提交完成`);
     }
   };
 }

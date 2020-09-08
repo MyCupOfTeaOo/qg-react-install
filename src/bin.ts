@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { program } from 'commander';
 import nconf from 'nconf';
+import path from 'path';
 import prettier from 'prettier';
 import signale from 'signale';
 import fse from 'fs-extra';
@@ -8,9 +9,9 @@ import ctx from './ctx';
 import './ComRunner/bin';
 import './BlockRunner/bin';
 
-program.version('0.0.1');
-program.option('-c, --config', 'show local config').action(cmd => {
-  if (cmd.config) {
+program.version(require(path.join(ctx.INSTALL_PATH, './package.json')).version);
+program.option('-c, --config', 'show local config').action(props => {
+  if (props.config) {
     console.log('配置文件地址: ', ctx.CONFIG_PATH);
     console.log('本地block缓存位置: ', ctx.BLOCK_PATH);
     console.log('本地com缓存位置: ', ctx.COM_PATH);

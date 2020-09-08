@@ -14,4 +14,5 @@ export default {
   SOURCE_CONFIG: path.resolve(__dirname, './config.json'),
   CONFIG_PATH: path.join(os.homedir(), '.qg-react-install', './config.json'),
   PROJECT_PATH: PROJECT_PATH,
+  INSTALL_PATH: pkgDir.sync(path.resolve(__dirname))!,
 };
