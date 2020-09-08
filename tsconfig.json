@@ -17,5 +17,12 @@
     "outDir": "./dist"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "scripts", "block", "dist"]
+  "exclude": [
+    "node_modules",
+    "scripts",
+    "block",
+    "dist",
+    "src/com",
+    "src/block"
+  ]
 }
