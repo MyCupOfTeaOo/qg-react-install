@@ -14,7 +14,9 @@ export interface ComPackage {
 }
 
 export interface Com extends ComPackage {
-  group: '@qg-com' | '@qg-util';
+  group: string;
+  shortName: string;
+  type: 'com' | 'util';
 }
 
 export interface Context {

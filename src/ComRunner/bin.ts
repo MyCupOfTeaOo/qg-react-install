@@ -6,6 +6,7 @@ import { Com } from '../interface';
 
 const myProgram = new Command('com');
 myProgram
+  .option('-i, --install', 'install com')
   .option('-u, --url <com_url>', 'com git repository url')
   .option('-c, --clear', 'clear com cache')
   .option('-s, --save', 'save com config to local')
@@ -19,13 +20,15 @@ myProgram
     if (props.url) {
       runner.url(props.url);
     }
-    await runner.load();
+    if (props.clear) {
+      await runner.clear();
+    } else {
+      await runner.load();
+    }
     if (props.save) {
       runner.save();
     }
-    if (props.clear) {
-      runner.clear();
-    }
+
     if (props.link) {
       runner.link();
     }
@@ -57,7 +60,8 @@ myProgram
         },
       ]);
       runner.sync(res.comSelected);
-    } else {
+    }
+    if (props.install) {
       const comList = await runner.comList();
       const res = await inquirer.prompt([
         {

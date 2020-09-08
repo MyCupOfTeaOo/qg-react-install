@@ -27,6 +27,7 @@
     "pkg-dir": "^4.2.0",
     "prettier": "^2.0.5",
     "rimraf": "^3.0.2",
+    "rxjs": "^6.6.3",
     "signale": "^1.4.0",
     "split": "^1.0.1"
   },
@@ -40,7 +41,7 @@
     "start": "ts-node ./bin.ts",
     "build": "ts-node ./scripts/build.ts",
     "debug": "ts-node ./scripts/build.ts && npm pack",
-    "clear": "rimraf ",
+    "clear": "rimraf dist src/com src/block",
     "publish:all": "npm run build && release-it --ci"
   },
   "author": "tea",
