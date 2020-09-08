@@ -1,10 +1,10 @@
 import fse from 'fs-extra';
 import execa from 'execa';
 import path from 'path';
-import changeCase from 'change-case';
+import * as changeCase from 'change-case';
 import compareVersions from 'compare-versions';
 import { WriteStream } from 'tty';
-import signale from 'signale';
+import signale, { await } from 'signale';
 import nconf from 'nconf';
 import joi from 'joi';
 import glob from 'glob';
@@ -53,23 +53,20 @@ class ComRunner {
     interactive: false,
     scope: 'com',
   });
-  _comList: Com[] | undefined = undefined;
+  _comListMap: Record<string, Com[]> = {};
 
   constructor(ctx: Context) {
     this.ctx = ctx;
   }
 
-  comList = async () => {
-    if (this._comList) return this._comList;
-    this.interactiveLogger.time('parse com');
-    this.interactiveLogger.await('parse com info');
-    this.interactiveLogger.timeEnd('parse com');
+  comList = async (projectPath = this.ctx.COM_PATH) => {
+    if (this._comListMap[projectPath]) return this._comListMap[projectPath];
     const comList: Com[] = [];
     const coms = (await new Promise((resolve, reject) => {
       glob(
         './src/components/*/package.json',
         {
-          cwd: this.ctx.COM_PATH,
+          cwd: projectPath,
         },
         (err, matchers) => {
           if (err) {
@@ -81,7 +78,7 @@ class ComRunner {
       );
     })) as string[];
     coms.forEach(item => {
-      const pack = require(path.resolve(this.ctx.COM_PATH, item)) as ComPackage;
+      const pack = require(path.resolve(projectPath, item)) as ComPackage;
       const [group, shortName] = pack.name.split('/');
       comList.push({
         ...pack,
@@ -94,7 +91,7 @@ class ComRunner {
       glob(
         './src/utils/*.package.json',
         {
-          cwd: this.ctx.COM_PATH,
+          cwd: projectPath,
         },
         (err, matchers) => {
           if (err) {
@@ -106,7 +103,7 @@ class ComRunner {
       );
     })) as string[];
     utils.forEach(item => {
-      const pack = require(path.resolve(this.ctx.COM_PATH, item)) as ComPackage;
+      const pack = require(path.resolve(projectPath, item)) as ComPackage;
       const [group, shortName] = pack.name.split('/');
       comList.push({
         ...pack,
@@ -115,7 +112,7 @@ class ComRunner {
         type: 'util',
       });
     });
-    this._comList = comList;
+    this._comListMap[projectPath] = comList;
     return comList;
   };
 
@@ -124,6 +121,16 @@ class ComRunner {
     return comList.filter(com => {
       return this.config.links[com.name];
     });
+  };
+
+  getProjectComDeps = async () => {
+    return (await this.comList()).reduce<Record<string, string>>(
+      (map, com) =>
+        Object.assign(map, {
+          [com.name]: `^${com.version}`,
+        }),
+      {},
+    );
   };
 
   load = async () => {
@@ -391,57 +398,38 @@ class ComRunner {
       projectPath,
       'package.json',
     ));
-    const projectDeps = Object.assign({}, dependencies, devDependencies);
+    const projectDeps = Object.assign(
+      {},
+      dependencies,
+      devDependencies,
+      await this.getProjectComDeps(),
+    );
 
     if (depsNum) {
       this.logger.await(`[%d/${depsNum}}] - 分析依赖`, 0);
       let i = 1;
       for (const depKey of Object.keys(com.dependencies)) {
         this.logger.await(`[%d/${depsNum}}] - ${depKey}`, i);
-        if (depKey.startsWith('@qg-')) {
-          const hasDep =
-            com.type === 'com'
-              ? await fse.pathExists(
-                  path.resolve(
-                    projectPath,
-                    `src/components/${changeCase.pascalCase(
-                      depKey.split('/')[1],
-                    )}/package.json`,
-                  ),
-                )
-              : await fse.pathExists(
-                  path.resolve(
-                    projectPath,
-                    `src/utils/${changeCase.camelCase(
-                      depKey.split('/')[1],
-                    )}.package.json`,
-                  ),
-                );
-          if (hasDep) {
-            if (
-              compareVersions(
-                projectDeps[depKey].replace(/\^/g, ''),
-                com.dependencies[depKey].replace(/\^/g, ''),
-              )
-            ) {
+
+        if (projectDeps[depKey]) {
+          if (
+            compareVersions(
+              projectDeps[depKey].replace(/\^/g, ''),
+              com.dependencies[depKey].replace(/\^/g, ''),
+            ) < 0
+          ) {
+            if (depKey.startsWith('@qg-')) {
               qgDeps.push(depKey);
-            }
-          } else {
-            qgDeps.push(depKey);
-          }
-        } else {
-          if (projectDeps[depKey]) {
-            if (
-              compareVersions(
-                projectDeps[depKey].replace(/\^/g, ''),
-                com.dependencies[depKey].replace(/\^/g, ''),
-              ) < 0
-            ) {
+            } else {
               updateDeps.push([
                 depKey,
                 com.dependencies[depKey].replace(/\^/g, ''),
               ]);
             }
+          }
+        } else {
+          if (depKey.startsWith('@qg-')) {
+            qgDeps.push(depKey);
           } else {
             installDeps.push([
               depKey,
@@ -492,6 +480,10 @@ class ComRunner {
         i += 1;
         this.logger.await(`[%d/${qgDeps.length}] - ${depKey}`, i);
         const runner = new ComRunner(this.ctx);
+        runner.logger = new signale.Signale({
+          scope: com.name,
+          interactive: true,
+        });
         const target = (await this.comList()).find(
           item => item.name === depKey,
         );

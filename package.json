@@ -41,7 +41,7 @@
     "start": "ts-node ./bin.ts",
     "build": "ts-node ./scripts/build.ts",
     "debug": "ts-node ./scripts/build.ts && npm pack",
-    "clear": "rimraf dist src/com src/block",
+    "clear": "rimraf dist src/com src/block *.tgz",
     "publish:all": "npm run build && release-it --ci"
   },
   "author": "tea",
