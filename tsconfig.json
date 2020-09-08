@@ -10,13 +10,11 @@
     "sourceRoot": "/",
     "noUnusedLocals": true,
     "experimentalDecorators": true,
+    "declaration": true,
     "baseUrl": ".",
     "strict": true,
     "allowSyntheticDefaultImports": true,
-    "outDir": "./dist",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "outDir": "./dist"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "scripts", "block", "dist"]

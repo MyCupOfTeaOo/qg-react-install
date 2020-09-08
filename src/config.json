@@ -1,0 +1,10 @@
+{
+  "block": {
+    "url": "git@192.168.117.144:common/react-block-scaffold.git",
+    "links": {}
+  },
+  "com": {
+    "url": "git@192.168.117.144:common/react-component-scaffold.git",
+    "links": {}
+  }
+}
