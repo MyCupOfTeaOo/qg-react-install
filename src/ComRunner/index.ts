@@ -120,7 +120,10 @@ class ComRunner {
   };
 
   syncComList = async () => {
-    return [] as Com[];
+    const comList = await this.comList();
+    return comList.filter(com => {
+      return this.config.links[com.name];
+    });
   };
 
   load = async () => {
@@ -259,6 +262,9 @@ class ComRunner {
       this._builder.unlink.forEach(com => {
         if (links[com.name]?.project[this.ctx.PROJECT_PATH]) {
           delete links[com.name].project[this.ctx.PROJECT_PATH];
+          if (Object.keys(links[com.name].project).length < 1) {
+            delete links[com.name];
+          }
         }
       });
       nconf.set('block', this.config);

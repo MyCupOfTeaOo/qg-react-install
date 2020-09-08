@@ -33,7 +33,26 @@ myProgram
       runner.link();
     }
     if (props.unlink) {
-      runner.unlink();
+      const comList = await runner.syncComList();
+      const res = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'comSelected',
+          message: '请选择需要卸载的组件',
+          choices: comList.map(com => ({
+            name: `${com.name}[${com.feature}](功能介绍: ${com.description})`,
+            value: com,
+            short: com.name,
+          })),
+          validate(blocks?: Com[]) {
+            if (!blocks?.length) {
+              return '至少选择一个组件';
+            }
+            return true;
+          },
+        },
+      ]);
+      runner.unlink(res.comSelected);
     }
     if (props.autoCommit || props.message) {
       runner.commit(props.message);
