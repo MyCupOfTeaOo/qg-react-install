@@ -15,7 +15,7 @@ myProgram
   .option('--sync', 'sync com all link project')
   .option('-a, --auto-commit', 'auto commit git message')
   .option('-m, --message <commit_msg>', 'commit message')
-  .option('-o, --overwrite <commit_msg>', 'overwrite same name file')
+  .option('-o, --overwrite', 'overwrite same name file')
   .action(async props => {
     const runner = new Runner(ctx);
     if (props.url) {
