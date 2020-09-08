@@ -209,7 +209,10 @@ class ComRunner {
         if (
           com.type === 'util' &&
           (await fse.pathExists(
-            path.resolve(this.ctx.PROJECT_PATH, `./src/utils/${com.shortName}.ts`),
+            path.resolve(
+              this.ctx.PROJECT_PATH,
+              `./src/utils/${com.shortName}.ts`,
+            ),
           )) &&
           !(await fse.pathExists(
             path.resolve(
@@ -520,7 +523,7 @@ class ComRunner {
         );
       } else {
         return glob(
-          `./src/utils/${com.shortName}.*`,
+          `./src/utils/{${com.shortName}.*,*/${com.shortName}.*,*/${com.shortName}}`,
           {
             cwd: this.ctx.COM_PATH,
           },
