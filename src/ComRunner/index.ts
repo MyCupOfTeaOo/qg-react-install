@@ -384,7 +384,7 @@ class ComRunner {
                 interactive: false,
                 stream: myStream,
               });
-              this._install(com, projectPath, logger)
+              this._install(com, projectPath, logger, 'update')
                 .catch(err => {
                   observer.error(err);
                 })
@@ -403,6 +403,7 @@ class ComRunner {
     com: Com,
     projectPath = this.ctx.PROJECT_PATH,
     logger: signale.Signale = this.logger,
+    action = 'install',
   ) => {
     const depsNum = Object.keys(com.dependencies).length;
     const qgDeps: string[] = [];
@@ -569,17 +570,14 @@ class ComRunner {
         [
           'commit',
           '-m',
-          this._builder.commit.message || `chore(com): install ${com.name}`,
+          this._builder.commit.message || `chore(com): ${action} ${com.name}`,
         ],
         {
           cwd: projectPath,
           all: true,
         },
       );
-      streamPrint(
-        commitProcess.all,
-        (logger as any).currentOptions.stream,
-      );
+      streamPrint(commitProcess.all, (logger as any).currentOptions.stream);
       await commitProcess;
       const pullProcess = execa('git', ['pull'], {
         cwd: projectPath,
