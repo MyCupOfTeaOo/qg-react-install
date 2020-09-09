@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.2.0...0.3.0) (2020-09-09)
+
+
+### Features
+
+* 区分安装与同步的打印日志 ([b53e827](https://github.com/MyCupOfTeaOo/qg-react-install/commit/b53e8279d7d85d0caf9c26a6072e0b099902c085))
+
 # [0.2.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.1.0...0.2.0) (2020-09-08)
 
 
