@@ -1,3 +1,15 @@
+# [0.5.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.4.0...0.5.0) (2020-12-24)
+
+
+### Bug Fixes
+
+* 修复类型 ([542908a](https://github.com/MyCupOfTeaOo/qg-react-install/commit/542908a8290d9cbe5251a977a1bc8b3ad438a006))
+
+
+### Features
+
+* auto-commit 与 message 子命令合并 ([2068e42](https://github.com/MyCupOfTeaOo/qg-react-install/commit/2068e42c81c3a91ec4ad41148afed4774c8abfcb))
+
 # [0.4.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.3.0...0.4.0) (2020-12-24)
 
 
