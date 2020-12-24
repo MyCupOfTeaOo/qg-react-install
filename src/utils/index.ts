@@ -13,7 +13,7 @@ export function saveConfig() {
       if (err) {
         reject(err);
       } else {
-        resolve();
+        resolve(undefined);
       }
     });
   });
