@@ -14,8 +14,7 @@ myProgram
   .option('-l, --link', 'link project and save config')
   .option('-ul, --unlink', 'unlink project and save config')
   .option('--sync', 'sync block all link project')
-  .option('-a, --auto-commit', 'auto commit git message')
-  .option('-m, --message <commit_msg>', 'commit message')
+  .option('-m, --message [commit_msg]', 'commit message,not message will be auto generate message')
   .option('-o, --overwrite', 'overwrite same name file')
   .action(async props => {
     const runner = new Runner(ctx);
@@ -59,7 +58,7 @@ myProgram
       ]);
       runner.unlink(res.blockSelected);
     }
-    if (props.autoCommit || props.message) {
+    if (props.message) {
       runner.commit(props.message);
     }
     if (props.sync) {
