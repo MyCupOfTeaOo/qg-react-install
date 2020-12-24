@@ -13,7 +13,10 @@ myProgram
   .option('-l, --link', 'link project and save config')
   .option('-ul, --unlink', 'unlink project and save config')
   .option('--sync', 'sync com all link project')
-  .option('-m, --message [commit_msg]', 'commit message,not message will be auto generate message')
+  .option(
+    '-m, --message [commit_msg]',
+    'commit message,not message will be auto generate message',
+  )
   .option('-o, --overwrite', 'overwrite same name file')
   .action(async props => {
     const runner = new Runner(ctx);
@@ -58,7 +61,9 @@ myProgram
       runner.unlink(res.comSelected);
     }
     if (props.message) {
-      runner.commit(props.message);
+      runner.commit(
+        typeof props.message === 'boolean' ? undefined : props.message,
+      );
     }
     if (props.sync) {
       const list = await runner.syncList();
