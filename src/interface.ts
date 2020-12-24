@@ -1,4 +1,13 @@
-export interface ComPackage {
+export interface Route {
+  path: string;
+  exact?: boolean;
+  title?: string;
+  component: string;
+  Routes?: string[];
+  routes?: Route[];
+}
+
+export interface BasePackage {
   name: string;
   version: string;
   feature: string;
@@ -13,10 +22,23 @@ export interface ComPackage {
   };
 }
 
-export interface Com extends ComPackage {
+export interface Com extends BasePackage {
   group: string;
   shortName: string;
   type: 'com' | 'util';
+}
+
+export interface BlockPackage extends BasePackage {
+  main: string;
+  Routes?: string[];
+  exact?: boolean;
+  routes?: Route[];
+}
+
+export interface Block extends BlockPackage {
+  group: string;
+  shortName: string;
+  type: 'block';
 }
 
 export interface Context {
@@ -26,7 +48,7 @@ export interface Context {
   CONFIG_PATH: string;
 }
 
-export interface ComLink {
+export interface BaseLink {
   project: {
     [path: string]: {};
   };

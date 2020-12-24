@@ -37,19 +37,19 @@ myProgram
       runner.overwrite();
     }
     if (props.unlink) {
-      const comList = await runner.syncComList();
+      const list = await runner.syncList();
       const res = await inquirer.prompt([
         {
           type: 'checkbox',
           name: 'comSelected',
           message: '请选择需要卸载的组件',
-          choices: comList.map(com => ({
-            name: `${com.name}[${com.feature}](功能介绍: ${com.description})`,
-            value: com,
-            short: com.name,
+          choices: list.map(item => ({
+            name: `${item.name}[${item.feature}](功能介绍: ${item.description})`,
+            value: item,
+            short: item.name,
           })),
-          validate(blocks?: Com[]) {
-            if (!blocks?.length) {
+          validate(items?: Com[]) {
+            if (!items?.length) {
               return '至少选择一个组件';
             }
             return true;
@@ -62,20 +62,20 @@ myProgram
       runner.commit(props.message);
     }
     if (props.sync) {
-      const comList = await runner.syncComList();
+      const list = await runner.syncList();
 
       const res = await inquirer.prompt([
         {
           type: 'checkbox',
           name: 'comSelected',
           message: '请选择需要同步的组件',
-          choices: comList.map(com => ({
-            name: `${com.name}[${com.feature}](功能介绍: ${com.description})`,
-            value: com,
-            short: com.name,
+          choices: list.map(item => ({
+            name: `${item.name}[${item.feature}](功能介绍: ${item.description})`,
+            value: item,
+            short: item.name,
           })),
-          validate(blocks?: Com[]) {
-            if (!blocks?.length) {
+          validate(items?: Com[]) {
+            if (!items?.length) {
               return '至少选择一个组件';
             }
             return true;
@@ -85,19 +85,19 @@ myProgram
       runner.sync(res.comSelected);
     }
     if (props.install) {
-      const comList = await runner.comList();
+      const list = await runner.getList();
       const res = await inquirer.prompt([
         {
           type: 'checkbox',
           name: 'comSelected',
           message: '请选择需要安装的组件',
-          choices: comList.map(com => ({
-            name: `${com.name}[${com.feature}](功能介绍: ${com.description})`,
-            value: com,
-            short: com.name,
+          choices: list.map(item => ({
+            name: `${item.name}[${item.feature}](功能介绍: ${item.description})`,
+            value: item,
+            short: item.name,
           })),
-          validate(blocks?: Com[]) {
-            if (!blocks?.length) {
+          validate(items?: Com[]) {
+            if (!items?.length) {
               return '至少选择一个组件';
             }
             return true;

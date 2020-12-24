@@ -9,9 +9,8 @@ import nconf from 'nconf';
 import joi from 'joi';
 import glob from 'glob';
 import rimraf from 'rimraf';
-import { isBuffer } from 'util';
 import { Observable } from 'rxjs';
-import { Context, Com, ComPackage, ComLink } from '../interface';
+import { Context, Com, BasePackage, BaseLink } from '../interface';
 import { saveConfig, streamPrint, separator } from '../utils';
 import Listr from 'listr';
 
@@ -54,16 +53,16 @@ class ComRunner {
     interactive: false,
     scope: this.scope,
   });
-  _comListMap: Record<string, Com[]> = {};
+  _listMap: Record<string, Com[]> = {};
 
   constructor(ctx: Context) {
     this.ctx = ctx;
   }
 
-  comList = async (projectPath = this.ctx.COM_PATH) => {
-    if (this._comListMap[projectPath]) return this._comListMap[projectPath];
-    const comList: Com[] = [];
-    const coms = (await new Promise((resolve, reject) => {
+  getList = async (projectPath = this.ctx.COM_PATH) => {
+    if (this._listMap[projectPath]) return this._listMap[projectPath];
+    const list: Com[] = [];
+    const pkgs = (await new Promise((resolve, reject) => {
       glob(
         './src/components/*/package.json',
         {
@@ -78,10 +77,10 @@ class ComRunner {
         },
       );
     })) as string[];
-    coms.forEach(item => {
-      const pack = require(path.resolve(projectPath, item)) as ComPackage;
+    pkgs.forEach(item => {
+      const pack = require(path.resolve(projectPath, item)) as BasePackage;
       const [group, shortName] = pack.name.split('/');
-      comList.push({
+      list.push({
         ...pack,
         group: group,
         shortName,
@@ -104,28 +103,28 @@ class ComRunner {
       );
     })) as string[];
     utils.forEach(item => {
-      const pack = require(path.resolve(projectPath, item)) as ComPackage;
+      const pack = require(path.resolve(projectPath, item)) as BasePackage;
       const [group, shortName] = pack.name.split('/');
-      comList.push({
+      list.push({
         ...pack,
         group: group,
         shortName,
         type: 'util',
       });
     });
-    this._comListMap[projectPath] = comList;
-    return comList;
+    this._listMap[projectPath] = list;
+    return list;
   };
 
-  syncComList = async () => {
-    const comList = await this.comList();
-    return comList.filter(com => {
-      return this.config.links[com.name];
+  syncList = async () => {
+    const list = await this.getList();
+    return list.filter(item => {
+      return this.config.links[item.name];
     });
   };
 
   getProjectComDeps = async () => {
-    return (await this.comList(this.ctx.PROJECT_PATH)).reduce<
+    return (await this.getList(this.ctx.PROJECT_PATH)).reduce<
       Record<string, string>
     >(
       (map, com) =>
@@ -163,7 +162,7 @@ class ComRunner {
         if (error) {
           reject(error);
         } else {
-          resolve();
+          resolve(undefined);
         }
       });
     });
@@ -356,7 +355,7 @@ class ComRunner {
   };
 
   _sync = (com: Com) => {
-    const link = this.config.links[com.name] as Record<string, ComLink>;
+    const link = this.config.links[com.name] as Record<string, BaseLink>;
     return new Listr(
       Object.keys(link.project).map(projectPath => {
         return {
@@ -366,7 +365,7 @@ class ComRunner {
               const myStream = ({
                 fd: 1,
                 write(text: string | Buffer) {
-                  if (isBuffer(text)) {
+                  if (Buffer.isBuffer(text)) {
                     observer.next(text.toString('utf-8'));
                   } else {
                     observer.next(text);
@@ -501,7 +500,7 @@ class ComRunner {
           scope: `${this.scope}->${com.name}`,
           interactive: true,
         });
-        const target = (await this.comList()).find(
+        const target = (await this.getList()).find(
           item => item.name === depKey,
         );
         if (!target) {
