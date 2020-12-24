@@ -48,8 +48,17 @@ export interface Context {
   CONFIG_PATH: string;
 }
 
-export interface BaseLink {
+export interface BaseLink<T = {}> {
   project: {
-    [path: string]: {};
+    [path: string]: T;
   };
+}
+
+export interface IRoute {
+  path?: string;
+  component?: string;
+  routes?: IRoute[];
+  Routes?: string[];
+  redirect?: string;
+  [key: string]: any;
 }

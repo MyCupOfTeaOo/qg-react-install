@@ -89,7 +89,7 @@ myProgram
       const list = await runner.getList();
       const res = await inquirer.prompt([
         {
-          type: 'checkbox',
+          type: 'list',
           name: 'blockSelected',
           message: '请选择需要安装的组件',
           choices: list.map(item => ({
@@ -97,15 +97,22 @@ myProgram
             value: item,
             short: item.name,
           })),
-          validate(items?: Block[]) {
-            if (!items?.length) {
-              return '至少选择一个组件';
+        },
+        {
+          type: 'input',
+          name: 'menuId',
+          message: '请输入菜单id',
+          validate(menuId?: string) {
+            if (!menuId) {
+              return '请输入菜单id';
             }
             return true;
           },
         },
       ]);
-      runner.install(res.blockSelected);
+      runner.install(res.blockSelected, {
+        menuId: res.menuId,
+      });
     }
     await runner.exec();
   });

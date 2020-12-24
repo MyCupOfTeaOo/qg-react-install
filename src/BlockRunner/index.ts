@@ -6,18 +6,24 @@ import compareVersions from 'compare-versions';
 import { WriteStream } from 'tty';
 import signale from 'signale';
 import nconf from 'nconf';
+import prettier from 'prettier';
 import joi from 'joi';
 import glob from 'glob';
 import rimraf from 'rimraf';
 import { Observable } from 'rxjs';
 import Listr from 'listr';
 import ComRunner from '../ComRunner';
-import { Context, BaseLink, Block, BlockPackage, Com } from '../interface';
+import { Context, BaseLink, Block, BlockPackage, IRoute } from '../interface';
 import { saveConfig, streamPrint, separator } from '../utils';
+
+export interface InstallOptions {
+  menuId: string;
+}
+export type BlockLink = BaseLink<InstallOptions>;
 
 interface Builder {
   save: boolean;
-  install: Block[];
+  install: [Block, InstallOptions][];
   sync: Block[];
   link: boolean;
   unlink: Block[];
@@ -25,6 +31,42 @@ interface Builder {
     message?: string;
   };
   overwrite: boolean;
+}
+
+function patchRoutes(pascalBlockName: string, routes: IRoute[]): IRoute[] {
+  return routes.map(route => {
+    return {
+      ...route,
+      component: route.component
+        ? `./${path.join(pascalBlockName, route.component).replace(/\\/g, '/')}`
+        : undefined,
+      routes: route.routes
+        ? patchRoutes(pascalBlockName, route.routes)
+        : undefined,
+    };
+  });
+}
+
+function genPageConfig(
+  installOptions: InstallOptions,
+  path: string,
+  block: Block,
+) {
+  return prettier.format(
+    `{
+    "menuId": "${installOptions.menuId}",
+    "Routes": ${JSON.stringify(block.Routes)},
+    "component": "${path}",
+    "isMenu": true,
+    "exact": ${block.exact ?? !block.routes?.length},
+    "routes": ${JSON.stringify(
+      patchRoutes(changeCase.pascalCase(block.name), block.routes || []),
+    )},
+  }`,
+    {
+      parser: 'json',
+    },
+  );
 }
 
 const schema = joi
@@ -155,9 +197,10 @@ class BlockRunner {
       let i = 0;
 
       for (const item of this._builder.install) {
+        const [block, options] = item;
         i += 1;
         this.logger.await(
-          `[%d/${this._builder.install.length}] - 准备安装:  ${item.name}`,
+          `[%d/${this._builder.install.length}] - 准备安装:  ${block.name}`,
           i,
         );
         // 如果存在同名文件且没有package.json则询问是否覆盖
@@ -166,14 +209,14 @@ class BlockRunner {
           (await fse.pathExists(
             path.resolve(
               this.ctx.PROJECT_PATH,
-              `./src/pages/${changeCase.pascalCase(item.shortName)}`,
+              `./src/pages/${changeCase.pascalCase(block.shortName)}`,
             ),
           )) &&
           !(await fse.pathExists(
             path.resolve(
               this.ctx.PROJECT_PATH,
               `./src/pages/${changeCase.pascalCase(
-                item.shortName,
+                block.shortName,
               )}/package.json`,
             ),
           ))
@@ -182,15 +225,15 @@ class BlockRunner {
         }
         if (hasItem) {
           if (this._builder.overwrite) {
-            this.logger.warn(`出现了非组件的同名文件,覆盖 ${item.name}`);
+            this.logger.warn(`出现了非组件的同名文件,覆盖 ${block.name}`);
             separator();
-            await this._install(item);
+            await this._install([block, options]);
           } else {
-            this.logger.warn(`出现了非组件的同名文件,跳过 ${item.name}`);
+            this.logger.warn(`出现了非组件的同名文件,跳过 ${block.name}`);
             separator();
           }
         } else {
-          await this._install(item);
+          await this._install([block, options]);
         }
       }
       this.logger.success(`[%d/${this._builder.install.length}] - 安装结束`, i);
@@ -219,14 +262,15 @@ class BlockRunner {
     if (this._builder.link && this._builder.install) {
       const links = this.config.links;
       this._builder.install.forEach(item => {
-        if (!links[item.name]) {
-          links[item.name] = {
+        const [block, options] = item;
+        if (!links[block.name]) {
+          links[block.name] = {
             project: {},
           };
         }
-        links[item.name].project[this.ctx.PROJECT_PATH] = {};
+        links[block.name].project[this.ctx.PROJECT_PATH] = options;
         this.logger.success(
-          `检测到link命令,建立依赖关系 ${item.name} -> ${this.ctx.PROJECT_PATH}`,
+          `检测到link命令,建立依赖关系 ${block.name} -> ${this.ctx.PROJECT_PATH}`,
         );
       });
       nconf.set('block', this.config);
@@ -260,15 +304,11 @@ class BlockRunner {
     return this;
   };
 
-  install = (item: Block) => {
+  install = (item: Block, options: InstallOptions) => {
     if (!this._builder.install) {
       this._builder.install = [];
     }
-    if (Array.isArray(item)) {
-      this._builder.install.push(...item);
-    } else {
-      this._builder.install.push(item);
-    }
+    this._builder.install.push([item, options]);
     return this;
   };
 
@@ -313,7 +353,7 @@ class BlockRunner {
   };
 
   _sync = (item: Block) => {
-    const link = this.config.links[item.name] as Record<string, BaseLink>;
+    const link = this.config.links[item.name] as BlockLink;
     return new Listr(
       Object.keys(link.project).map(projectPath => {
         return {
@@ -341,7 +381,12 @@ class BlockRunner {
                 interactive: false,
                 stream: myStream,
               });
-              this._install(item, projectPath, logger, 'update')
+              this._install(
+                [item, link.project[projectPath]],
+                projectPath,
+                logger,
+                'update',
+              )
                 .catch(err => {
                   observer.error(err);
                 })
@@ -357,12 +402,13 @@ class BlockRunner {
   };
 
   _install = async (
-    item: Block,
+    item: [Block, InstallOptions],
     projectPath = this.ctx.PROJECT_PATH,
     logger: signale.Signale = this.logger,
     action = 'install',
   ) => {
-    const depsNum = Object.keys(item.dependencies).length;
+    const [block, options] = item;
+    const depsNum = Object.keys(block.dependencies).length;
     const qgDeps: string[] = [];
     const installDeps: [string, string][] = [];
     const updateDeps: [string, string][] = [];
@@ -382,14 +428,14 @@ class BlockRunner {
     if (depsNum) {
       logger.await(`[%d/${depsNum}] - 分析依赖`, 0);
       let i = 1;
-      for (const depKey of Object.keys(item.dependencies)) {
+      for (const depKey of Object.keys(block.dependencies)) {
         logger.await(`[%d/${depsNum}] - ${depKey}`, i);
 
         if (projectDeps[depKey]) {
           if (
             compareVersions(
               projectDeps[depKey].replace(/\^/g, ''),
-              item.dependencies[depKey].replace(/\^/g, ''),
+              block.dependencies[depKey].replace(/\^/g, ''),
             ) < 0
           ) {
             if (depKey.startsWith('@qg-')) {
@@ -397,7 +443,7 @@ class BlockRunner {
             } else {
               updateDeps.push([
                 depKey,
-                item.dependencies[depKey].replace(/\^/g, ''),
+                block.dependencies[depKey].replace(/\^/g, ''),
               ]);
             }
           }
@@ -407,7 +453,7 @@ class BlockRunner {
           } else {
             installDeps.push([
               depKey,
-              item.dependencies[depKey].replace(/\^/g, ''),
+              block.dependencies[depKey].replace(/\^/g, ''),
             ]);
           }
         }
@@ -454,19 +500,18 @@ class BlockRunner {
       for (const depKey of qgDeps) {
         i += 1;
         logger.await(`[%d/${qgDeps.length}] - ${depKey}`, i);
-        let runner: BlockRunner | ComRunner;
         if (depKey.startsWith('@qg-block')) {
-          runner = new BlockRunner(this.ctx);
-        } else {
-          runner = new ComRunner(this.ctx);
+          logger.warn(`依赖其他block ${depKey} 跳过,如无安装请自行安装`);
+          continue;
         }
-        runner.scope = `${this.scope}->${item.name}`;
+        const runner = new ComRunner(this.ctx);
+        runner.scope = `${this.scope}->${block.name}`;
         runner.logger = new signale.Signale({
-          scope: `${this.scope}->${item.name}`,
+          scope: `${this.scope}->${block.name}`,
           interactive: true,
         });
         await runner.load();
-        const target = ((await runner.getList()) as (Com | Block)[]).find(
+        const target = (await runner.getList()).find(
           item => item.name === depKey,
         );
         if (!target) {
@@ -476,15 +521,16 @@ class BlockRunner {
         if (this._builder.overwrite) {
           runner.overwrite();
         }
-        await runner.install(target as any).exec();
+        await runner.install(target).exec();
         separator();
       }
     }
+    const pascalName = changeCase.pascalCase(block.shortName);
     const files = await new Promise<string[]>((resolve, reject) => {
       return glob(
-        `./src/pages/${changeCase.pascalCase(item.shortName)}`,
+        `./src/pages/${pascalName}`,
         {
-          cwd: this.ctx.COM_PATH,
+          cwd: this.ctx.BLOCK_PATH,
         },
         (error, matchs) => {
           if (error) {
@@ -495,17 +541,32 @@ class BlockRunner {
         },
       );
     });
+    const filesLen = files.length + 1;
     let i = 0;
-    logger.await(`[%d/${files.length}] - 准备安装文件`, i);
+    logger.await(`[%d/${filesLen}] - 准备安装文件`, i);
     for (const filePath of files) {
       i += 1;
-      logger.await(`[%d/${files.length}] - ${filePath}`, i);
+      logger.await(`[%d/${filesLen}] - ${filePath}`, i);
       await fse.copy(
         path.resolve(this.ctx.BLOCK_PATH, filePath),
         path.resolve(projectPath, filePath),
       );
     }
-    logger.success(`[${files.length}/${files.length}] - 安装完毕`);
+    const parseMain = path.parse(block.main);
+    fse.outputFile(
+      path.resolve(projectPath, `src/pages/${pascalName}/config.page.json`),
+      genPageConfig(
+        options,
+        `./${path.join(
+          `${pascalName}`,
+          path.join(parseMain.dir, parseMain.name),
+        )}`.replace(/\\/g, '/'),
+        block,
+      ),
+    );
+    i += 1;
+    logger.await(`[%d/${filesLen}] - config.page.json`);
+    logger.success(`[${filesLen}/${filesLen}] - 安装完毕`);
     if (this._builder.commit) {
       logger.await('检测到自动提交');
       const addProcess = execa('git', ['add', '-A'], {
@@ -520,7 +581,7 @@ class BlockRunner {
           'commit',
           '-m',
           this._builder.commit.message ||
-            `chore(block): ${action} ${item.name}`,
+            `chore(block): ${action} ${block.name}`,
         ],
         {
           cwd: projectPath,

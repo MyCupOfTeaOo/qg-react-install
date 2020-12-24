@@ -302,7 +302,7 @@ class ComRunner {
     return this;
   };
 
-  install = (com: Com) => {
+  install = (com: Com | Com[]) => {
     if (!this._builder.install) {
       this._builder.install = [];
     }
