@@ -1,3 +1,16 @@
+# [0.4.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.3.0...0.4.0) (2020-12-24)
+
+
+### Bug Fixes
+
+* 修复安装block ([206cbac](https://github.com/MyCupOfTeaOo/qg-react-install/commit/206cbac93ceeba28fe11bc0f4da43712cf9dee33))
+
+
+### Features
+
+* 修改action ([3e75140](https://github.com/MyCupOfTeaOo/qg-react-install/commit/3e751401aeb10e31ade728cbc665f7fc23ebf066))
+* 支持block ([e893996](https://github.com/MyCupOfTeaOo/qg-react-install/commit/e8939966212280ce4a0ffc28ab253d28847b0cea))
+
 # [0.3.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.2.0...0.3.0) (2020-09-09)
 
 
