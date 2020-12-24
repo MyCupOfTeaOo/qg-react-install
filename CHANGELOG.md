@@ -1,3 +1,10 @@
+## [0.5.1](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.5.0...0.5.1) (2020-12-24)
+
+
+### Bug Fixes
+
+* 修复 message 命令 ([39e3311](https://github.com/MyCupOfTeaOo/qg-react-install/commit/39e3311452a95f395e3c612e6f42548488f82508))
+
 # [0.5.0](https://github.com/MyCupOfTeaOo/qg-react-install/compare/0.4.0...0.5.0) (2020-12-24)
 
 
